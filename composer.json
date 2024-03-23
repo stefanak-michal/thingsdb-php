@@ -1,0 +1,40 @@
+{
+    "name": "stefanak-michal/thingsdb-php",
+    "description": "PHP connector for ThingsDB",
+    "keywords": ["php", "thingsdb"],
+    "type": "library",
+    "license": "Apache-2.0",
+    "minimum-stability": "stable",
+    "require": {
+        "php": "^8.2",
+        "revolt/event-loop": "^1.0",
+        "rybakit/msgpack": "^0.9.1",
+        "ext-mbstring": "*"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^11"
+    },
+    "funding": [
+        {
+            "type": "ko-fi",
+            "url": "https://ko-fi.com/michalstefanak"
+        }
+    ],
+    "authors": [
+        {
+            "name": "Michal Stefanak",
+            "role": "Developer",
+            "homepage": "https://www.linkedin.com/in/michalstefanak/"
+        }
+    ],
+    "autoload": {
+        "psr-4": {
+            "ThingsDB\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "ThingsDB\\test\\": "test/"
+        }
+    }
+}
