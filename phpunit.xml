@@ -2,10 +2,11 @@
 <phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" colors="true" xsi:noNamespaceSchemaLocation="vendor/phpunit/phpunit/phpunit.xsd" bootstrap="src/autoload.php">
     <testsuites>
         <testsuite name="ThingsDB">
-            <directory>./test</directory>
+            <directory>./tests</directory>
         </testsuite>
     </testsuites>
     <php>
+        <env name="THINGSDB_URI" value="127.0.0.1:9200" />
         <env name="THINGSDB_USERNAME" value="admin" />
         <env name="THINGSDB_PASSWORD" value="pass" />
     </php>

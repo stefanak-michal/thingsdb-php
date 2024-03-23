@@ -2,7 +2,7 @@
 
 namespace ThingsDB\enum;
 
-enum PackageType: int
+enum RequestType: int
 {
     case PING = 32;
     case AUTH = 33;
