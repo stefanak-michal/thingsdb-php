@@ -2,6 +2,7 @@
     "name": "stefanak-michal/thingsdb-php",
     "description": "PHP connector for ThingsDB",
     "keywords": ["php", "thingsdb"],
+    "homepage": "https://github.com/stefanak-michal/thingsdb-php",
     "type": "library",
     "license": "Apache-2.0",
     "minimum-stability": "stable",
@@ -13,6 +14,11 @@
     },
     "require-dev": {
         "phpunit/phpunit": "^11"
+    },
+    "support": {
+        "issues": "https://github.com/stefanak-michal/thingsdb-php/issues",
+        "source": "https://github.com/stefanak-michal/thingsdb-php",
+        "docs": "https://docs.thingsdb.io/"
     },
     "funding": [
         {
