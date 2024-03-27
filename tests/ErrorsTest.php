@@ -7,7 +7,10 @@ use PHPUnit\Framework\TestCase;
 
 /**
  * Class ErrorsTest
- * @package ${NAMESPACE}
+ *
+ * @author Michal Stefanak
+ * @link https://github.com/stefanak-michal/thingsdb-php
+ * @package ThingsDB\tests
  */
 class ErrorsTest extends TestCase
 {

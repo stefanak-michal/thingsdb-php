@@ -5,12 +5,14 @@ namespace ThingsDB\tests;
 use PHPUnit\Framework\Attributes\Depends;
 use PHPUnit\Framework\TestCase;
 use ThingsDB\enum\ResponseType;
-use ThingsDB\Response;
 use ThingsDB\ThingsDB;
 
 /**
  * Class ListeningTest
- * @package ${NAMESPACE}
+ *
+ * @author Michal Stefanak
+ * @link https://github.com/stefanak-michal/thingsdb-php
+ * @package ThingsDB\tests
  */
 class ListeningTest extends TestCase
 {
@@ -36,11 +38,11 @@ class ListeningTest extends TestCase
     #[Depends('testAuth')]
     public function testCollection(): void
     {
-        $exists = self::$thingsDB->query('@thingsdb', 'has_collection("stuff");');
+        $exists = self::$thingsDB->query('@thingsdb', 'has_collection(colName);', ['colName' => 'stuff']);
         $this->assertIsBool($exists);
 
         if (!$exists) {
-            $name = self::$thingsDB->query('@thingsdb', 'new_collection("stuff");');
+            $name = self::$thingsDB->query('@thingsdb', 'new_collection(colName);', ['colName' => 'stuff']);
             $this->assertIsString($name);
             $this->assertEquals('stuff', $name);
         }
@@ -56,11 +58,10 @@ class ListeningTest extends TestCase
     #[Depends('testCreateRoom')]
     public function testJoin(): void
     {
-        $response = self::$thingsDB->join('@:stuff', self::$roomId);
+        $response = self::$thingsDB->join('@:stuff', [self::$roomId]);
         $this->assertEquals([self::$roomId], $response);
 
         $response = self::$thingsDB->listening();
-        $this->assertInstanceOf(Response::class, $response);
         $this->assertEquals(ResponseType::ON_JOIN, $response->type);
         $this->assertEquals(self::$roomId, $response->data['id']);
     }
@@ -68,31 +69,50 @@ class ListeningTest extends TestCase
     #[Depends('testJoin')]
     public function testEmit(): void
     {
+        $success = self::$thingsDB->emit('@:stuff', self::$roomId, 'test-event', ['Testing event 1']);
+        $this->assertTrue($success);
+
+        $response = self::$thingsDB->listening();
+        $this->assertEquals(ResponseType::ON_EMIT, $response->type);
+        $this->assertEquals('test-event', $response->data['event']);
+        $this->assertEquals('Testing event 1', $response->data['args'][0]);
+    }
+
+    #[Depends('testJoin')]
+    public function testEmit2(): void
+    {
         $success = self::$thingsDB->emit('@:stuff', self::$roomId, 'test-event');
         $this->assertTrue($success);
+
+        $response = self::$thingsDB->listening();
+        $this->assertEquals(ResponseType::ON_EMIT, $response->type);
+        $this->assertEquals('test-event', $response->data['event']);
     }
 
     #[Depends('testEmit')]
-    public function testOnEmit(): void
+    public function testWaitForEmit(): void
     {
         $taskId = self::$thingsDB->query('@:stuff', 'task(
             datetime().move("seconds", 2), 
-            || .my_room.emit("test-event", "Anybody listening?")
+            || .my_room.emit("test-event", "Testing event 2")
         ).id();');
         $this->assertIsInt($taskId);
 
         $response = self::$thingsDB->listening();
-        $this->assertInstanceOf(Response::class, $response);
         $this->assertEquals(ResponseType::ON_EMIT, $response->type);
         $this->assertEquals('test-event', $response->data['event']);
-        $this->assertEquals('Anybody listening?', $response->data['args'][0]);
+        $this->assertEquals('Testing event 2', $response->data['args'][0]);
     }
 
     #[Depends('testEmit')]
     public function testLeave(): void
     {
-        $response = self::$thingsDB->leave('@:stuff', self::$roomId);
+        $response = self::$thingsDB->leave('@:stuff', [self::$roomId]);
         $this->assertEquals([self::$roomId], $response);
+
+        $response = self::$thingsDB->listening();
+        $this->assertEquals(ResponseType::ON_LEAVE, $response->type);
+        $this->assertEquals(self::$roomId, $response->data['id']);
     }
 
     #[Depends('testLeave')]
@@ -100,6 +120,7 @@ class ListeningTest extends TestCase
     {
         $this->testJoin();
         $this->assertNotEmpty(self::$thingsDB->query('@:stuff', '.del("my_room");'));
+
         $response = self::$thingsDB->listening();
         $this->assertEquals(ResponseType::ON_DELETE, $response->type);
         $this->assertEquals(self::$roomId, $response->data['id']);
