@@ -2,6 +2,13 @@
 
 namespace ThingsDB\enum;
 
+/**
+ * enum ResponseType
+ *
+ * @author Michal Stefanak
+ * @link https://github.com/stefanak-michal/thingsdb-php
+ * @package ThingsDB\enum
+ */
 enum ResponseType: int
 {
     case PONG = 16;

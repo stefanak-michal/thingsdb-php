@@ -8,7 +8,10 @@ use ThingsDB\ThingsDB;
 
 /**
  * Class ThingsDBTest
- * @package test
+ *
+ * @author Michal Stefanak
+ * @link https://github.com/stefanak-michal/thingsdb-php
+ * @package ThingsDB\tests
  */
 class ThingsDBTest extends TestCase
 {
@@ -42,13 +45,21 @@ class ThingsDBTest extends TestCase
     }
 
     #[Depends('testAuth')]
+    public function testHello(): void
+    {
+        $response = self::$thingsDB->query('@thingsdb', '"Hello World!";');
+        $this->assertIsString($response);
+        $this->assertEquals('Hello World!', $response);
+    }
+
+    #[Depends('testAuth')]
     public function testCollection(): void
     {
-        $exists = self::$thingsDB->query('@thingsdb', 'has_collection("stuff");');
+        $exists = self::$thingsDB->query('@thingsdb', 'has_collection(colName);', ['colName' => 'stuff']);
         $this->assertIsBool($exists);
 
         if (!$exists) {
-            $name = self::$thingsDB->query('@thingsdb', 'new_collection("stuff");');
+            $name = self::$thingsDB->query('@thingsdb', 'new_collection(colName);', ['colName' => 'stuff']);
             $this->assertIsString($name);
             $this->assertEquals('stuff', $name);
         }
@@ -65,7 +76,7 @@ class ThingsDBTest extends TestCase
     #[Depends('testQuery')]
     public function testAuthToken(): void
     {
-        $token = self::$thingsDB->query('@thingsdb', 'new_token("' . $_ENV['THINGSDB_USERNAME'] . '", datetime().move("minutes", 1));');
+        $token = self::$thingsDB->query('@thingsdb', 'new_token(user, datetime().move("minutes", 1));', ['user' => $_ENV['THINGSDB_USERNAME']]);
         $this->assertIsString($token);
         $this->assertTrue(self::$thingsDB->authToken($token));
     }
@@ -73,14 +84,14 @@ class ThingsDBTest extends TestCase
     #[Depends('testAuthToken')]
     public function testProcedure(): void
     {
-        $exists = self::$thingsDB->query('@:stuff', 'has_procedure("add_one");');
+        $exists = self::$thingsDB->query('@:stuff', 'has_procedure(procName);', ['procName' => 'add_one']);
         $this->assertIsBool($exists);
         if ($exists) {
-            $result = self::$thingsDB->query('@:stuff', 'del_procedure("add_one");');
+            $result = self::$thingsDB->query('@:stuff', 'del_procedure(procName);', ['procName' => 'add_one']);
             $this->assertNull($result);
         }
 
-        $name = self::$thingsDB->query('@:stuff', 'new_procedure("add_one", |x| x + 1);');
+        $name = self::$thingsDB->query('@:stuff', 'new_procedure(procName, |x| x + 1);', ['procName' => 'add_one']);
         $this->assertIsString($name);
         $this->assertEquals('add_one', $name);
     }
@@ -88,9 +99,55 @@ class ThingsDBTest extends TestCase
     #[Depends('testProcedure')]
     public function testRun(): void
     {
-        $result = self::$thingsDB->run('@:stuff', 'add_one', 41);
+        $result = self::$thingsDB->run('@:stuff', 'add_one', [41]);
         $this->assertIsInt($result);
         $this->assertEquals(42, $result);
+    }
+
+    #[Depends('testAuthToken')]
+    public function testProcedure2(): void
+    {
+        $exists = self::$thingsDB->query('@:stuff', 'has_procedure(procName);', ['procName' => 'multiply']);
+        $this->assertIsBool($exists);
+        if ($exists) {
+            $result = self::$thingsDB->query('@:stuff', 'del_procedure(procName);', ['procName' => 'multiply']);
+            $this->assertNull($result);
+        }
+
+        $name = self::$thingsDB->query('@:stuff', 'new_procedure(procName, |x, y| x * y);', ['procName' => 'multiply']);
+        $this->assertIsString($name);
+        $this->assertEquals('multiply', $name);
+    }
+
+    #[Depends('testProcedure2')]
+    public function testRun2(): void
+    {
+        $result = self::$thingsDB->run('@:stuff', 'multiply', [4, 5]);
+        $this->assertIsInt($result);
+        $this->assertEquals(20, $result);
+    }
+
+    #[Depends('testAuthToken')]
+    public function testProcedure3(): void
+    {
+        $exists = self::$thingsDB->query('@:stuff', 'has_procedure(procName);', ['procName' => 'say_hello']);
+        $this->assertIsBool($exists);
+        if ($exists) {
+            $result = self::$thingsDB->query('@:stuff', 'del_procedure(procName);', ['procName' => 'say_hello']);
+            $this->assertNull($result);
+        }
+
+        $name = self::$thingsDB->query('@:stuff', 'new_procedure(procName, || "Hello World!");', ['procName' => 'say_hello']);
+        $this->assertIsString($name);
+        $this->assertEquals('say_hello', $name);
+    }
+
+    #[Depends('testProcedure3')]
+    public function testRun3(): void
+    {
+        $result = self::$thingsDB->run('@:stuff', 'say_hello');
+        $this->assertIsString($result);
+        $this->assertEquals('Hello World!', $result);
     }
 
 }

@@ -2,6 +2,13 @@
 
 namespace ThingsDB\enum;
 
+/**
+ * enum RequestType
+ *
+ * @author Michal Stefanak
+ * @link https://github.com/stefanak-michal/thingsdb-php
+ * @package ThingsDB\enum
+ */
 enum RequestType: int
 {
     case PING = 32;
