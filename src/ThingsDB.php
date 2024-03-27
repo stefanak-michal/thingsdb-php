@@ -15,6 +15,8 @@ class ThingsDB
 {
     private $socket;
     private int $id = 1;
+    /** @var Response[] */
+    private $incoming = [];
 
     public function __construct(public readonly string $uri = '127.0.0.1:9200', public readonly float $timeout = 15)
     {
@@ -23,15 +25,21 @@ class ThingsDB
 
     public function listening(float $timelimit = 3): ?Response
     {
+        if (!empty($this->incoming)) {
+            return array_shift($this->incoming);
+        }
+
         $suspension = EventLoop::getSuspension();
 
         $readableId = EventLoop::onReadable($this->socket, function ($id) use ($suspension): void {
-            EventLoop::cancel($id);
             try {
                 $suspension->resume($this->read());
             } catch (Exception $e) {
                 $suspension->throw($e);
             }
+
+            if (feof($this->socket))
+                EventLoop::cancel($id);
         });
 
         $delayId = EventLoop::delay($timelimit, function () use ($readableId, $suspension): void {
@@ -130,17 +138,34 @@ class ThingsDB
     {
         $suspension = EventLoop::getSuspension();
 
-        EventLoop::onReadable($this->socket, function ($id) use ($suspension): void {
-            EventLoop::cancel($id);
+        $readableId = EventLoop::onReadable($this->socket, function ($loopId) use ($suspension, $id): void {
+//            EventLoop::cancel($id);
             try {
-                $suspension->resume($this->read());
+                $response = $this->read();
+                $this->incoming[$response->id] = $response;
+                if ($response->id === $id)
+                    $suspension->resume(null);
             } catch (Exception $e) {
                 $suspension->throw($e);
             }
+            if (feof($this->socket))
+                EventLoop::cancel($loopId);
+        });
+
+        $delayId = EventLoop::delay(1, function () use ($readableId, $suspension): void {
+            EventLoop::cancel($readableId);
+            $suspension->resume();
         });
 
         $this->write($id, $type, $data);
-        return $suspension->suspend();
+        $suspension->suspend();
+        EventLoop::cancel($readableId);
+        EventLoop::cancel($delayId);
+//        var_dump($this->incoming);
+
+        $response = $this->incoming[$id];
+        unset($this->incoming[$id]);
+        return $response;
     }
 
     private function write(int $id, RequestType $type, mixed $data = null): void
