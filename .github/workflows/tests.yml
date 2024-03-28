@@ -17,7 +17,8 @@ jobs:
     services:
       thingsdb:
         image: ghcr.io/thingsdb/node:latest
-        options: --init
+        options: >-
+          --init
         ports:
           - 9200:9200
 
@@ -36,6 +37,4 @@ jobs:
         run: composer install --no-progress
 
       - name: Test with phpunit
-        env:
-          THINGSDB_URI: localhost:9200
         run: vendor/bin/phpunit --bootstrap bootstrap.php --configuration phpunit.xml --testsuite "ThingsDB"
