@@ -1,15 +1,17 @@
 {
     "name": "stefanak-michal/thingsdb-php",
     "description": "PHP connector for ThingsDB",
-    "keywords": ["php", "thingsdb"],
+    "keywords": ["php", "thingsdb", "socket"],
     "homepage": "https://github.com/stefanak-michal/thingsdb-php",
     "type": "library",
+    "readme": "README.md",
     "license": "Apache-2.0",
     "minimum-stability": "stable",
     "require": {
         "php": "^8.2",
         "rybakit/msgpack": "^0.9.1",
-        "ext-mbstring": "*"
+        "ext-mbstring": "*",
+        "ext-openssl": "*"
     },
     "require-dev": {
         "phpunit/phpunit": "^11"
