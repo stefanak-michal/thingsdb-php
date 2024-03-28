@@ -17,6 +17,7 @@ jobs:
     services:
       thingsdb:
         image: ghcr.io/thingsdb/node:latest
+        options: --init
         ports:
           - 9200:9200
 
