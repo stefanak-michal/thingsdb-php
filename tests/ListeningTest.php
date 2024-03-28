@@ -3,7 +3,6 @@
 namespace ThingsDB\tests;
 
 use PHPUnit\Framework\Attributes\Depends;
-use PHPUnit\Framework\TestCase;
 use ThingsDB\enum\ResponseType;
 use ThingsDB\ThingsDB;
 
@@ -14,7 +13,7 @@ use ThingsDB\ThingsDB;
  * @link https://github.com/stefanak-michal/thingsdb-php
  * @package ThingsDB\tests
  */
-class ListeningTest extends TestCase
+class ListeningTest extends ATest
 {
     private static int $roomId;
 
@@ -32,20 +31,13 @@ class ListeningTest extends TestCase
 
     public function testAuth(): void
     {
-        $this->assertTrue(self::$thingsDB->auth($_ENV['THINGSDB_USERNAME'], $_ENV['THINGSDB_PASSWORD']));
+        $this->authUser(self::$thingsDB);
     }
 
     #[Depends('testAuth')]
     public function testCollection(): void
     {
-        $exists = self::$thingsDB->query('@thingsdb', 'has_collection(colName);', ['colName' => 'stuff']);
-        $this->assertIsBool($exists);
-
-        if (!$exists) {
-            $name = self::$thingsDB->query('@thingsdb', 'new_collection(colName);', ['colName' => 'stuff']);
-            $this->assertIsString($name);
-            $this->assertEquals('stuff', $name);
-        }
+        $this->stuffCollection(self::$thingsDB);
     }
 
     #[Depends('testCollection')]
@@ -67,7 +59,7 @@ class ListeningTest extends TestCase
     }
 
     #[Depends('testJoin')]
-    public function testEmit(): void
+    public function testEmitWithArgument(): void
     {
         $success = self::$thingsDB->emit('@:stuff', self::$roomId, 'test-event', ['Testing event 1']);
         $this->assertTrue($success);
@@ -78,8 +70,8 @@ class ListeningTest extends TestCase
         $this->assertEquals('Testing event 1', $response->data['args'][0]);
     }
 
-    #[Depends('testJoin')]
-    public function testEmit2(): void
+    #[Depends('testEmitWithArgument')]
+    public function testEmitWithoutArgument(): void
     {
         $success = self::$thingsDB->emit('@:stuff', self::$roomId, 'test-event');
         $this->assertTrue($success);
@@ -87,9 +79,10 @@ class ListeningTest extends TestCase
         $response = self::$thingsDB->listening();
         $this->assertEquals(ResponseType::ON_EMIT, $response->type);
         $this->assertEquals('test-event', $response->data['event']);
+        $this->assertEmpty($response->data['args']);
     }
 
-    #[Depends('testEmit')]
+    #[Depends('testEmitWithoutArgument')]
     public function testWaitForEmit(): void
     {
         $taskId = self::$thingsDB->query('@:stuff', 'task(
@@ -104,7 +97,7 @@ class ListeningTest extends TestCase
         $this->assertEquals('Testing event 2', $response->data['args'][0]);
     }
 
-    #[Depends('testEmit')]
+    #[Depends('testWaitForEmit')]
     public function testLeave(): void
     {
         $response = self::$thingsDB->leave('@:stuff', [self::$roomId]);

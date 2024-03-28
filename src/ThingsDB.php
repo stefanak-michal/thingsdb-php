@@ -3,7 +3,6 @@
 namespace ThingsDB;
 
 use MessagePack\MessagePack;
-use Revolt\EventLoop;
 use ThingsDB\enum\RequestType;
 use ThingsDB\enum\ResponseType;
 use ThingsDB\error\{ConnectException, PackageException, ThingsException};
@@ -18,7 +17,7 @@ use ThingsDB\error\{ConnectException, PackageException, ThingsException};
 class ThingsDB
 {
     /** @var resource */
-    private $socket;
+    private $socket = null;
 
     /**
      * Internal package ID counter
@@ -35,10 +34,17 @@ class ThingsDB
     /**
      * @param string $uri
      * @param float $timeout
+     * @param array $context Array provided to stream_context_create https://www.php.net/manual/en/function.stream-context-create.php
      * @throws ConnectException
      */
-    public function __construct(public readonly string $uri = '127.0.0.1:9200', public readonly float $timeout = 15)
+    public function __construct(
+        public readonly string $uri = '127.0.0.1:9200',
+        public readonly float  $timeout = 15,
+        public readonly array  $context = ['socket' => ['tcp_nodelay' => true]]
+    )
     {
+        if (intval(ini_get('max_execution_time')) > 0 && $this->timeout > intval(ini_get('max_execution_time')))
+            throw new ConnectException('Timeout can\'t be bigger than php max_execution_time');
         $this->connect();
     }
 
@@ -50,13 +56,16 @@ class ThingsDB
      * Ping, useful as keep-alive.
      * @link https://docs.thingsdb.io/v1/connect/socket/ping/
      * @return bool
-     * @throws ThingsException
      */
     public function ping(): bool
     {
         $id = $this->getNextId();
-        $response = $this->send($id, RequestType::PING);
-        return $response->type === ResponseType::PONG;
+        try {
+            $response = $this->send($id, RequestType::PING);
+            return $response->type === ResponseType::PONG;
+        } catch (ThingsException) {
+            return false;
+        }
     }
 
     /**
@@ -181,37 +190,22 @@ class ThingsDB
      */
     public function listening(float $timeLimit = 0): ?Response
     {
-        if (!empty($this->responses)) {
+        if (!empty($this->responses))
             return array_shift($this->responses);
-        }
 
-        $suspension = EventLoop::getSuspension();
+        if (!is_resource($this->socket))
+            throw new ConnectException('Not connected');
 
-        $readableId = EventLoop::onReadable($this->socket, function ($id) use ($suspension): void {
-            try {
-                $suspension->resume($this->read());
-            } catch (ThingsException $e) {
-                $suspension->throw($e);
-            }
-            if (feof($this->socket))
-                EventLoop::cancel($id);
-        });
-
-        if ($timeLimit === 0)
+        if ($timeLimit > 0 && $timeLimit > intval(ini_get('max_execution_time')))
+            throw new ConnectException('Time limit can\'t be bigger than php max_execution_time');
+        if ($timeLimit == 0)
             $timeLimit = $this->timeout;
-        $delayId = '';
-        if ($timeLimit > 0) {
-            $delayId = EventLoop::delay($timeLimit, function () use ($suspension, $readableId): void {
-                EventLoop::cancel($readableId);
-                $suspension->resume();
-            });
-        }
 
-        $response = $suspension->suspend();
-        EventLoop::cancel($readableId);
-        if (!empty($delayId))
-            EventLoop::cancel($delayId);
-        return $response;
+        $read = [$this->socket];
+        $write = null;
+        $except = null;
+        $result = stream_select($read, $write, $except, $timeLimit > 0 ? intval($timeLimit) : null, $timeLimit > 0 ? intval(($timeLimit - floor($timeLimit)) * 1_000_000) : null);
+        return $result == 1 ? $this->read() : null;
     }
 
     /*
@@ -224,7 +218,7 @@ class ThingsDB
      */
     private function connect(): void
     {
-        $this->socket = @stream_socket_client($this->uri, $errno, $errstr, 3);
+        $this->socket = stream_socket_client($this->uri, $errno, $errstr, $this->timeout, context: !empty($this->context) ? stream_context_create($this->context) : null);
         if ($this->socket === false)
             throw new ConnectException($errstr, $errno);
 
@@ -233,10 +227,22 @@ class ThingsDB
 
         if (!stream_set_timeout($this->socket, $this->timeout))
             throw new ConnectException('Cannot set timeout on connection');
+
+        if (array_key_exists('ssl', $this->context) && !empty($this->context['ssl'])) {
+            while (true) {
+                $result = stream_socket_enable_crypto($this->socket, true, STREAM_CRYPTO_METHOD_ANY_CLIENT);
+                if ($result)
+                    break;
+                elseif ($result === 0)
+                    usleep(200_000);
+                elseif ($result === false)
+                    throw new ConnectException('Enable encryption error');
+            }
+        }
     }
 
     /**
-     * Send package and immediately get response
+     * Send package and immediately get the right response
      * @param int $id
      * @param RequestType $type
      * @param mixed|null $data
@@ -245,35 +251,28 @@ class ThingsDB
      */
     private function send(int $id, RequestType $type, mixed $data = null): Response
     {
-        $suspension = EventLoop::getSuspension();
-
-        $readableId = EventLoop::onReadable($this->socket, function ($_id) use ($suspension, $id): void {
-            try {
-                $response = $this->read();
-                $this->responses[$response->id] = $response;
-                if ($response->id === $id)
-                    $suspension->resume();
-            } catch (ThingsException $e) {
-                $suspension->throw($e);
-            }
-            if (feof($this->socket))
-                EventLoop::cancel($_id);
-        });
-
-        $delayId = EventLoop::delay(1, function () use ($suspension, $readableId): void {
-            EventLoop::cancel($readableId);
-            $suspension->resume();
-        });
-
         $this->write($id, $type, $data);
-        $suspension->suspend();
-        EventLoop::cancel($readableId);
-        EventLoop::cancel($delayId);
 
-        if (!array_key_exists($id, $this->responses))
-            throw new ConnectException('Response package for request id ' . $id . ' not received');
-        $response = $this->responses[$id];
-        unset($this->responses[$id]);
+        do {
+            $read = [$this->socket];
+            $write = null;
+            $except = null;
+            $result = stream_select($read, $write, $except, 0, 200000);
+
+            $response = null;
+            switch ($result) {
+                case 0:
+                    continue 2;
+                case 1:
+                    $response = $this->read();
+                    if ($response->id != $id)
+                        $this->responses[$response->id] = $response;
+                    break;
+                default: //false
+                    throw new ConnectException('Nothing to read available');
+            }
+        } while (is_null($response) || $response->id != $id);
+
         return $response;
     }
 
@@ -287,6 +286,9 @@ class ThingsDB
      */
     private function write(int $id, RequestType $type, mixed $data = null): void
     {
+        if (!is_resource($this->socket))
+            throw new ConnectException('Not connected');
+
         $header = '';
         $packed = empty($data) ? '' : MessagePack::pack($data);
 
@@ -313,6 +315,9 @@ class ThingsDB
      */
     private function read(): Response
     {
+        if (!is_resource($this->socket))
+            throw new ConnectException('Not connected');
+
         $header = stream_get_contents($this->socket, 8);
         if (mb_strlen($header, '8bit') !== 8)
             throw new ConnectException('Insufficient header length for received package');
@@ -363,7 +368,7 @@ class ThingsDB
     {
         if (is_resource($this->socket)) {
             stream_socket_shutdown($this->socket, STREAM_SHUT_RDWR);
-            unset($this->socket);
+            $this->socket = null;
         }
     }
 }
