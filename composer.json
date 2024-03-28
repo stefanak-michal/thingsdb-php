@@ -8,7 +8,6 @@
     "minimum-stability": "stable",
     "require": {
         "php": "^8.2",
-        "revolt/event-loop": "^1.0",
         "rybakit/msgpack": "^0.9.1",
         "ext-mbstring": "*"
     },
@@ -35,11 +34,7 @@
     ],
     "autoload": {
         "psr-4": {
-            "ThingsDB\\": "src/"
-        }
-    },
-    "autoload-dev": {
-        "psr-4": {
+            "ThingsDB\\": "src/",
             "ThingsDB\\tests\\": "tests/"
         }
     }
