@@ -3,6 +3,7 @@
     <testsuites>
         <testsuite name="ThingsDB">
             <directory>./tests</directory>
+            <exclude>./tests/ATest.php</exclude>
         </testsuite>
     </testsuites>
     <php>
