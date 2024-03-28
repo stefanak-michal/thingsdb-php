@@ -133,8 +133,8 @@ class ThingsDB
      * Join one or more room(s).
      * @link https://docs.thingsdb.io/v1/connect/socket/join/
      * @param string $scope
-     * @param array $ids
-     * @return array
+     * @param int[] $ids List of room(s) to join
+     * @return int[] List of left room(s)
      * @throws ThingsException
      */
     public function join(string $scope, array $ids): array
@@ -147,8 +147,8 @@ class ThingsDB
     /**
      * Leave one or more room(s).
      * @param string $scope
-     * @param array $ids
-     * @return array
+     * @param int[] $ids List of room(s) to leave
+     * @return int[] List of leaved room(s)
      * @throws ThingsException
      */
     public function leave(string $scope, array $ids): array
