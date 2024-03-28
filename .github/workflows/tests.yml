@@ -35,4 +35,4 @@ jobs:
         run: composer install --no-progress
 
       - name: Test with phpunit
-        run: vendor/bin/phpunit --configuration phpunit.xml --testsuite "ThingsDB"
+        run: vendor/bin/phpunit --bootstrap bootstrap.php --configuration phpunit.xml --testsuite "ThingsDB"
