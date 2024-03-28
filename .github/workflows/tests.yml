@@ -16,7 +16,7 @@ jobs:
 
     services:
       thingsdb:
-        image: ???
+        image: ghcr.io/thingsdb/node:latest
         ports:
           - 9200:9200
 
