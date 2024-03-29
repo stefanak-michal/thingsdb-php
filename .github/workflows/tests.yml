@@ -19,11 +19,11 @@ jobs:
         image: ghcr.io/thingsdb/node:latest
         env:
           THINGSDB_HTTP_STATUS_PORT: 9001
+          THINGSDB_INIT: true
         ports:
           - 9001:9001
           - 9200:9200
         options: >-
-          --init
           --health-cmd "wget http://localhost:9001/healthy || exit 1"
 
     steps:
