@@ -34,7 +34,7 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php-version }}
-          extensions: mbstring, sockets, openssl
+          extensions: mbstring, sockets
           ini-values: max_execution_time=0
 
       - name: Install dependencies
