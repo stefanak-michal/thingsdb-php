@@ -19,6 +19,7 @@ jobs:
         image: ghcr.io/thingsdb/node:latest
         options: >-
           --init
+          --health-cmd "wget http://localhost:9200/healthy || exit 1"
         ports:
           - 9200:9200
 
