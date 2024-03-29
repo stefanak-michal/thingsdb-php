@@ -318,9 +318,16 @@ class ThingsDB
         if (!is_resource($this->socket))
             throw new ConnectException('Not connected');
 
-        $header = stream_get_contents($this->socket, 8);
+        $header = '';
+        do {
+            $read = stream_get_contents($this->socket, 8 - mb_strlen($header, '8bit'));
+            if ($read === false)
+                throw new ConnectException('Read from connection was not successful');
+            $header .= $read;
+        } while (mb_strlen($header, '8bit') < 8);
+
         if (mb_strlen($header, '8bit') !== 8)
-            throw new ConnectException('Insufficient header length for received package');
+            throw new ConnectException('Insufficient header length for received package: ' . mb_strlen($header, '8bit'));
 
         $length = (int)unpack('V', mb_strcut($header, 0, 4))[1];
         $id = (int)unpack('v', mb_strcut($header, 4, 2))[1];

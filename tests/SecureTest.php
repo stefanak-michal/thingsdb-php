@@ -15,13 +15,22 @@ class SecureTest extends ATest
 {
     public function testSsl(): void
     {
-        if (!array_key_exists('THINGSDB_TOKEN', $_ENV))
-            $this->markTestSkipped('ThingsDB playground access token not provided');
-
-        $thingsDB = new ThingsDB('playground.thingsdb.net:9400', 5, [
+        $thingsDB = new ThingsDB($_ENV['THINGSDB_URI'], 5, [
             'socket' => ['tcp_nodelay' => true],
-            'ssl' => ['verify_peer' => true]
+            'ssl' => [
+                'allow_self_signed' => true,
+                'verify_peer' => false,
+                'verify_peer_name' => false
+            ]
         ]);
-        $this->assertTrue($thingsDB->authToken($_ENV['THINGSDB_TOKEN']));
+        $this->assertTrue($thingsDB->ping());
+        $this->authUser($thingsDB);
+
+        $rc = new \ReflectionClass($thingsDB);
+        $rp = $rc->getProperty('socket');
+        $socket = $rp->getValue($thingsDB);
+        $meta = stream_get_meta_data($socket);
+        $this->assertArrayHasKey('crypto', $meta);
+        $this->assertStringStartsWith('TLS', $meta['crypto']['protocol']);
     }
 }

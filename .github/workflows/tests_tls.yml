@@ -1,0 +1,42 @@
+name: Tests with ThingsDB on PHP^8.2 with TLS
+
+on:
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  tests:
+    runs-on: ubuntu-22.04
+    name: "Running phpunit tests for PHP ${{ matrix.php-version }} on ThingsDB with TLS"
+    strategy:
+      fail-fast: false
+      matrix:
+        php-version: ['8.2', '8.3']
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Docker build
+        run: docker build -t thingsdbtls . -f ci/tls.Dockerfile
+
+      - name: Docker run
+        run: |
+          docker run --name thingsdb_tls -d -p 9443:9443 -p 9002:9002 thingsdbtls
+          wget http://localhost:9002/healthy || exit 1
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php-version }}
+          extensions: mbstring, sockets, openssl
+          ini-values: max_execution_time=0
+
+      - name: Install dependencies
+        run: composer install --no-progress
+
+      - name: Test with phpunit
+        env:
+          THINGSDB_URI: 127.0.0.1:9443
+        run: vendor/bin/phpunit --bootstrap bootstrap.php --configuration phpunit.xml --testsuite "Secure"

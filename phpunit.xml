@@ -2,7 +2,12 @@
 <phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" colors="true" xsi:noNamespaceSchemaLocation="vendor/phpunit/phpunit/phpunit.xsd" bootstrap="src/autoload.php">
     <testsuites>
         <testsuite name="ThingsDB">
-            <directory>./tests</directory>
+            <file>./tests/ThingsDBTest.php</file>
+            <file>./tests/ListeningTest.php</file>
+            <file>./tests/ErrorsTest.php</file>
+        </testsuite>
+        <testsuite name="Secure">
+            <file>./tests/SecureTest.php</file>
         </testsuite>
     </testsuites>
     <php>
