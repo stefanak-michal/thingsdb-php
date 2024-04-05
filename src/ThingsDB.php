@@ -366,7 +366,7 @@ class ThingsDB
     private function getNextId(): int
     {
         $id = $this->id++;
-        if ($this->id > 32767)
+        if ($this->id > 65535)
             $this->id = 1;
         return $id;
     }
