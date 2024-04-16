@@ -25,6 +25,7 @@ jobs:
           - 9200:9200
           - 9001:9001
         options: >-
+          --init
           --health-cmd "wget http://localhost:9001/healthy || exit 1"
 
     steps:
