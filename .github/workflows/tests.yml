@@ -14,17 +14,22 @@ jobs:
       matrix:
         php-version: ['8.2', '8.3']
 
+    services:
+      thingsdb:
+        image: ghcr.io/thingsdb/node:latest
+        env:
+          THINGSDB_INIT: true
+          THINGSDB_LISTEN_CLIENT_PORT: 9200
+          THINGSDB_HTTP_STATUS_PORT: 9001
+        ports:
+          - 9200:9200
+          - 9001:9001
+        options: >-
+          --health-cmd "wget http://localhost:9200/healthy || exit 1"
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Docker build
-        run: docker build -t thingsdb . -f ci/thingsdb.Dockerfile
-
-      - name: Docker run
-        run: |
-          docker run --name thingsdb -d -p 9200:9200 -p 9001:9001 thingsdb
-          wget http://localhost:9001/healthy || exit 1
 
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
