@@ -25,7 +25,7 @@ jobs:
           - 9200:9200
           - 9001:9001
         options: >-
-          --health-cmd "wget http://localhost:9200/healthy || exit 1"
+          --health-cmd "wget http://localhost:9001/healthy || exit 1"
 
     steps:
       - name: Checkout
