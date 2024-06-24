@@ -23,7 +23,7 @@ class ThingsDB
      * Internal package ID counter
      * @var int
      */
-    private int $id = 223;
+    private int $id = 1;
 
     /**
      * Internal buffer for emitted packages from ThingsDB which were not consumed because they were emitted while waiting for specific package
