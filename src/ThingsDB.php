@@ -23,7 +23,7 @@ class ThingsDB
      * Internal package ID counter
      * @var int
      */
-    private int $id = 1;
+    private int $id = 223;
 
     /**
      * Internal buffer for emitted packages from ThingsDB which were not consumed because they were emitted while waiting for specific package
@@ -329,10 +329,10 @@ class ThingsDB
         if (mb_strlen($header, '8bit') !== 8)
             throw new ConnectException('Insufficient header length for received package: ' . mb_strlen($header, '8bit'));
 
-        $length = (int)unpack('V', mb_strcut($header, 0, 4))[1];
-        $id = (int)unpack('v', mb_strcut($header, 4, 2))[1];
-        $type = (int)unpack('c', mb_strcut($header, 6, 1))[1];
-        $check = (int)unpack('c', mb_strcut($header, 7, 1))[1];
+        $length = (int)unpack('V', mb_strcut($header, 0, 4, '8bit'))[1];
+        $id = (int)unpack('v', mb_strcut($header, 4, 2, '8bit'))[1];
+        $type = (int)unpack('c', mb_strcut($header, 6, 1, '8bit'))[1];
+        $check = (int)unpack('c', mb_strcut($header, 7, 1, '8bit'))[1];
 
         if ($type != ~$check)
             throw new ConnectException('Received package type mismatch: ' . $type . ' != ' . (~$check));
