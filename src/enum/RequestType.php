@@ -18,4 +18,5 @@ enum RequestType: int
     case JOIN = 38;
     case LEAVE = 39;
     case EMIT = 40;
+    case EMIT_PEERS = 41;  /* requires ThingsDB >= 1.8.0 */
 }
