@@ -175,6 +175,24 @@ class ThingsDB
         return $response->type === ResponseType::OK;
     }
 
+    /**
+     * Emit an event to a room peers.
+     * @link https://docs.thingsdb.io/v1/connect/socket/emit/
+     * @since ThingsDB v1.8.0
+     * @param string $scope
+     * @param int $roomId
+     * @param string $event
+     * @param array $args
+     * @return bool
+     * @throws ThingsException
+     */
+    public function emitPeers(string $scope, int $roomId, string $event, array $args = []): bool
+    {
+        $id = $this->getNextId();
+        $response = $this->send($id, RequestType::EMIT_PEERS, [$scope, $roomId, $event, ...$args]);
+        return $response->type === ResponseType::OK;
+    }
+    
     /*
      * Listening
      */
