@@ -38,6 +38,7 @@ Every method has comment (annotation) with required information and link to docu
 | join        | Join one or more room(s)                                    |
 | leave       | Leave one or more room(s)                                   |
 | emit        | Emit an event to a room                                     |
+| emitPeers   | Emit an event to a room peers                               |
 | listening   | Listen for incoming packages                                |
 
 ### Listening
